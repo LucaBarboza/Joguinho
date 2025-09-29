@@ -94,7 +94,7 @@ def iniciar_novo_jogo():
     
     # Cria a instância do chat com o prompt do sistema
     st.session_state.chat = genai.GenerativeModel(
-        model_name="gemini-1.5-flash",
+        model_name="gemini-2.5-flash",
         system_instruction=prompt_sistema
     ).start_chat()
 
