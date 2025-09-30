@@ -47,7 +47,7 @@ def gerar_novo_personagem(lista_a_evitar: list) -> dict | None:
     Verifique se a identidade não é explicitamente revelada na descrição ou saudação e que o personagem não está na lista de exclusão antes de retornar a saída final.
     """
     try:
-        client = genai.GenerativeModel(model_name="gemini-1.5-flash")
+        client = genai.GenerativeModel(model_name="gemini-2.5-flash")
         
         nomes_a_evitar = ", ".join(lista_a_evitar) if lista_a_evitar else "Nenhum"
         prompt_formatado = prompt_gerador.format(lista_geracao=nomes_a_evitar)
@@ -104,7 +104,7 @@ def iniciar_novo_jogo():
     # Cria a instância do chat com o prompt do sistema
     # Este objeto será a garantia de que o jogo foi iniciado corretamente
     st.session_state.chat = genai.GenerativeModel(
-        model_name="gemini-1.5-flash",
+        model_name="gemini-2.5-flash",
         system_instruction=prompt_sistema
     ).start_chat()
 
