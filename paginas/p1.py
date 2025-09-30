@@ -4,13 +4,16 @@ from pydantic import BaseModel, Field
 import json
 
 # --- CONFIGURAÇÃO DA API DO GOOGLE ---
+# Certifique-se de que sua GOOGLE_API_KEY está configurada nos secrets do Streamlit
+try:
+    GOOGLE_API_KEY = st.secrets["GOOGLE_API_KEY"]
+    genai.configure(api_key=GOOGLE_API_KEY)
+except (KeyError, FileNotFoundError):
+    st.error("A GOOGLE_API_KEY não foi encontrada. Por favor, configure-a nos secrets do Streamlit.")
+    st.stop()
 
-GOOGLE_API_KEY = st.secrets["GOOGLE_API_KEY"]
-genai.configure(api_key=GOOGLE_API_KEY)
-client = genai.GenerativeModel(model_name="gemini-2.5-flash")
 
-
-# --- DEFINIÇÃO DO SCHEMA (ESTRUTURA) DO PERSONAGEM ---
+# --- DEFINIÇÃO DO SCHEMA (ESTRUTURA) DO PERSONAGEM VIA PYDANTIC ---
 class Personagem(BaseModel):
     """
     Schema para estruturar os dados do personagem gerado pela IA.
@@ -20,68 +23,68 @@ class Personagem(BaseModel):
     estilo: str = Field(description="Uma descrição sucinta do estilo de comunicação da persona (ex: 'Formal e enigmático', 'Alegre e um pouco caótico').")
     saudacao: str = Field(description="Uma frase curta de saudação que a persona diria ao iniciar o jogo.")
 
-# --- PROMPT PARA GERAR O PERSONAGEM ---
-PROMPT_GERADOR = """
-# Papel e Objetivo
-Você atua como roteirista e diretor de um jogo de adivinhação de personagens. Sua missão é selecionar secretamente uma figura conhecida (histórica, famosa ou fictícia) que seja amplamente reconhecida pelo público.
-**REGRA CRÍTICA:** O personagem escolhido NÃO PODE estar presente na seguinte lista de exclusão: {lista_geracao}
-Sua resposta deve conter, rigorosamente nesta ordem, os seguintes campos:
-- "personagem": Nome do personagem selecionado.
-- "descricao": Narrativa clara e envolvente sobre a persona, destacando feitos e características marcantes, mas sem revelar explicitamente a identidade. Use nível moderado de detalhe: seja específico, porém evite informar dados que entreguem o nome de forma explícita.
-- "estilo": Descrição detalhada do estilo de comunicação da persona.
-- "saudacao": Fala inicial, dando oi/olá ao jogador com a personalidade do personagem, mas sem revelar nenhuma de suas principais caracteristicas, genérico o suficiente para não revelar a identidade — não inclua nomes, títulos óbvios ou referências únicas facilmente reconhecíveis.
-Após definir a resposta, verifique se todos os campos estão preenchidos corretamente, que a identidade não é explicitamente revelada e que o personagem selecionado atende à regra crítica de exclusão. Se algum critério falhar, faça uma auto-correção antes de retornar a saída final.
-"""
 
 # --- FUNÇÕES DO JOGO ---
 
-@st.cache_data(show_spinner=False)
-def gerar_novo_personagem(lista_a_evitar):
+@st.cache_data(show_spinner="Estou buscando um novo personagem... 🕵️‍♂️")
+def gerar_novo_personagem(lista_a_evitar: list) -> dict | None:
     """
     Chama a API do Gemini para gerar um novo personagem com base no prompt e no schema.
-    Utiliza o cache do Streamlit para não gerar o mesmo personagem repetidamente.
+    Retorna um dicionário com os dados do personagem ou None em caso de falha.
     """
-    nomes_a_evitar = ", ".join(lista_a_evitar) if lista_a_evitar else "Nenhum"
-    prompt_formatado = PROMPT_GERADOR.format(lista_geracao=nomes_a_evitar)
+    # PROMPT PARA GERAR O PERSONAGEM
+    prompt_gerador = """
+    # Papel e Objetivo
+    Você atua como roteirista e diretor de um jogo de adivinhação de personagens. Sua missão é selecionar secretamente uma figura conhecida (histórica, famosa ou fictícia) que seja amplamente reconhecida pelo público.
+    **REGRA CRÍTICA:** O personagem escolhido NÃO PODE estar presente na seguinte lista de exclusão: {lista_geracao}
+    
+    Sua resposta deve ser um JSON contendo, rigorosamente, os seguintes campos:
+    - "personagem": Nome do personagem selecionado.
+    - "descricao": Narrativa clara e envolvente sobre a persona, destacando feitos e características marcantes, sem revelar explicitamente a identidade.
+    - "estilo": Descrição detalhada do estilo de comunicação da persona.
+    - "saudacao": Fala inicial, genérica o suficiente para não revelar a identidade.
+    
+    Verifique se a identidade não é explicitamente revelada na descrição ou saudação e que o personagem não está na lista de exclusão antes de retornar a saída final.
+    """
+    try:
+        client = genai.GenerativeModel(model_name="gemini-1.5-flash")
+        
+        nomes_a_evitar = ", ".join(lista_a_evitar) if lista_a_evitar else "Nenhum"
+        prompt_formatado = prompt_gerador.format(lista_geracao=nomes_a_evitar)
 
-    response = client.generate_content(
-      prompt_formatado,
-      generation_config=genai.types.GenerationConfig(
-          response_mime_type='application/json',
-          response_schema=Personagem,
-      )
-    )
-    return json.loads(response.text)
+        response = client.generate_content(
+            prompt_formatado,
+            generation_config=genai.types.GenerationConfig(
+                response_mime_type='application/json',
+                response_schema=Personagem,
+            )
+        )
+        return json.loads(response.text)
+    except Exception as e:
+        st.error(f"Ocorreu um erro ao contatar a API do Gemini: {e}")
+        return None
 
 
 def iniciar_novo_jogo():
     """
     Prepara o estado da sessão para um novo jogo.
     """
-    st.session_state.mensagens = []
-    
     if 'personagens_usados' not in st.session_state:
         st.session_state.personagens_usados = []
 
-    with st.spinner("Estou pensando em um novo personagem... 🕵️‍♂️"):
-        novo_personagem = gerar_novo_personagem(st.session_state.personagens_usados)
-        
-        # --- INÍCIO DA CORREÇÃO ---
-        # Verificação para garantir que a API retornou um dicionário com todas as chaves esperadas.
-        required_keys = ['personagem', 'descricao', 'estilo', 'saudacao']
-        if not isinstance(novo_personagem, dict) or not all(key in novo_personagem for key in required_keys):
-            st.error("Houve um erro ao gerar um novo personagem. Por favor, tente novamente.")
-            # Para depuração, você pode descomentar a linha abaixo para ver o que a API retornou:
-            # st.write("Resposta inesperada da API:", novo_personagem) 
-            return # Interrompe a execução da função para evitar o KeyError
-        # --- FIM DA CORREÇÃO ---
-            
-        st.session_state.personagem_secreto = novo_personagem
-        
-        # Adiciona o novo personagem à lista de exclusão para jogos futuros
-        st.session_state.personagens_usados.append(novo_personagem['personagem'])
+    novo_personagem = gerar_novo_personagem(st.session_state.personagens_usados)
 
-    # Monta o prompt do sistema para o chatbot
+    # Verificação robusta para garantir que a API retornou um personagem válido
+    if not isinstance(novo_personagem, dict) or not all(k in novo_personagem for k in Personagem.model_fields):
+        st.error("Não foi possível gerar um novo personagem. Por favor, tente novamente.")
+        return # Interrompe a execução para evitar erros
+
+    st.session_state.personagem_secreto = novo_personagem
+    st.session_state.personagens_usados.append(novo_personagem['personagem'])
+    
+    # Limpa o histórico de mensagens e prepara o prompt do sistema para o novo personagem
+    st.session_state.mensagens = []
+
     prompt_sistema = f"""
     ### Contexto do Jogo
     Você é um assistente de IA interpretando uma persona em um jogo de adivinhação.
@@ -90,40 +93,47 @@ def iniciar_novo_jogo():
     Seu estilo de comunicação é: {st.session_state.personagem_secreto['estilo']}.
 
     ### Regras Cruciais
-    1. **NUNCA REVELE SUA IDENTIDADE**: Sob nenhuma circunstância diga quem você é. Responda a perguntas diretas de forma evasiva e criativa.
+    1. **NUNCA REVELE SUA IDENTIDADE**: Sob nenhuma circunstância diga quem você é.
     2. **DÊ PISTAS INDIRETAS**: Responda com base no conhecimento e na perspectiva da sua persona.
     3. **SEJA O PERSONAGEM**: Incorpore a personalidade e o estilo de comunicação definidos.
-    4. **GERENCIE PALPITES**:
-        - Se o usuário errar, negue de forma sutil e dentro do personagem.
-        - Se o usuário acertar, confirme de maneira criativa e encerre o jogo parabenizando-o.
+    4. **GERENCIE PALPITES**: Se o usuário acertar, confirme de maneira criativa e parabenize-o. Se errar, negue sutilmente.
 
     Comece o jogo com a saudação definida. NADA MAIS.
     """
-    
+
     # Cria a instância do chat com o prompt do sistema
+    # Este objeto será a garantia de que o jogo foi iniciado corretamente
     st.session_state.chat = genai.GenerativeModel(
-        model_name="gemini-2.5-flash", # Recomendo usar gemini-1.5-flash para melhor performance
+        model_name="gemini-1.5-flash",
         system_instruction=prompt_sistema
     ).start_chat()
 
-    # Adiciona a saudação inicial do personagem ao histórico
+    # Adiciona a saudação inicial do personagem ao histórico para exibição
     saudacao_inicial = st.session_state.personagem_secreto['saudacao']
     st.session_state.mensagens.append({"role": "assistant", "content": saudacao_inicial})
-# --- INTERFACE DO STREAMLIT ---
+
+
+# --- INTERFACE GRÁFICA DO STREAMLIT ---
+
+st.set_page_config(page_title="Quem Sou Eu?", page_icon="🕵️")
 
 st.title("🕵️ Quem Sou Eu?")
-st.markdown("---")
 st.markdown("""
-Bem-vindo ao jogo de adivinhação! Eu vou pensar em um personagem e você terá que descobrir quem é fazendo perguntas.
-**Clique em 'Iniciar Novo Jogo' para começar!**
+Bem-vindo! Eu vou pensar em um personagem (real ou fictício) e você deve adivinhar quem é fazendo perguntas.
+**Clique no botão abaixo para começar!**
 """)
 
 if st.button("🚀 Iniciar Novo Jogo", type="primary", use_container_width=True):
+    # Limpa o estado antigo para garantir um novo começo
+    for key in ["chat", "mensagens", "personagem_secreto"]:
+        if key in st.session_state:
+            del st.session_state[key]
     iniciar_novo_jogo()
-    st.rerun() # Reinicia o script para atualizar a interface
+    st.rerun()
 
-# Se o jogo já começou, exibe a interface de chat
-if "mensagens" in st.session_state:
+# A interface de chat só aparece se o objeto 'chat' foi criado com sucesso.
+# Esta é a correção principal para o AttributeError.
+if "chat" in st.session_state:
     # Exibe o histórico de mensagens
     for mensagem in st.session_state.mensagens:
         with st.chat_message(mensagem["role"]):
@@ -138,12 +148,16 @@ if "mensagens" in st.session_state:
 
         # Envia a mensagem para a IA e obtém a resposta
         with st.spinner("Pensando..."):
-            resposta = st.session_state.chat.send_message(prompt)
-        
+            try:
+                resposta = st.session_state.chat.send_message(prompt)
+                resposta_texto = resposta.text
+            except Exception as e:
+                resposta_texto = f"Ocorreu um erro ao processar sua pergunta: {e}"
+
         # Adiciona a resposta da IA ao histórico e à interface
         with st.chat_message("assistant"):
-            st.markdown(resposta.text)
-        st.session_state.mensagens.append({"role": "assistant", "content": resposta.text})
+            st.markdown(resposta_texto)
+        st.session_state.mensagens.append({"role": "assistant", "content": resposta_texto})
         
         # Reinicia o script para atualizar a tela
         st.rerun()
