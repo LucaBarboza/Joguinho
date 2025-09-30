@@ -29,7 +29,7 @@ Sua resposta deve conter, rigorosamente nesta ordem, os seguintes campos:
 - "personagem": Nome do personagem selecionado.
 - "descricao": Narrativa clara e envolvente sobre a persona, destacando feitos e características marcantes, mas sem revelar explicitamente a identidade. Use nível moderado de detalhe: seja específico, porém evite informar dados que entreguem o nome de forma explícita.
 - "estilo": Descrição detalhada do estilo de comunicação da persona.
-- "saudacao": Cumprimento inicial caracterizado pelo estilo do personagem, porém genérico o suficiente para não revelar a identidade — não inclua nomes, títulos óbvios ou referências únicas facilmente reconhecíveis.
+- "saudacao": Fala inicial, dando oi ao jogador com a personalidade do personagem, mas sem revelar nada de suas principais caracteristicas, genérico o suficiente para não revelar a identidade — não inclua nomes, títulos óbvios ou referências únicas facilmente reconhecíveis.
 Após definir a resposta, verifique se todos os campos estão preenchidos corretamente, que a identidade não é explicitamente revelada e que o personagem selecionado atende à regra crítica de exclusão. Se algum critério falhar, faça uma auto-correção antes de retornar a saída final.
 """
 
