@@ -60,12 +60,22 @@ def iniciar_novo_jogo():
     """
     st.session_state.mensagens = []
     
-    # Gera um novo personagem, evitando os que já foram usados na sessão
     if 'personagens_usados' not in st.session_state:
         st.session_state.personagens_usados = []
 
     with st.spinner("Estou pensando em um novo personagem... 🕵️‍♂️"):
         novo_personagem = gerar_novo_personagem(st.session_state.personagens_usados)
+        
+        # --- INÍCIO DA CORREÇÃO ---
+        # Verificação para garantir que a API retornou um dicionário com todas as chaves esperadas.
+        required_keys = ['personagem', 'descricao', 'estilo', 'saudacao']
+        if not isinstance(novo_personagem, dict) or not all(key in novo_personagem for key in required_keys):
+            st.error("Houve um erro ao gerar um novo personagem. Por favor, tente novamente.")
+            # Para depuração, você pode descomentar a linha abaixo para ver o que a API retornou:
+            # st.write("Resposta inesperada da API:", novo_personagem) 
+            return # Interrompe a execução da função para evitar o KeyError
+        # --- FIM DA CORREÇÃO ---
+            
         st.session_state.personagem_secreto = novo_personagem
         
         # Adiciona o novo personagem à lista de exclusão para jogos futuros
@@ -84,23 +94,21 @@ def iniciar_novo_jogo():
     2. **DÊ PISTAS INDIRETAS**: Responda com base no conhecimento e na perspectiva da sua persona.
     3. **SEJA O PERSONAGEM**: Incorpore a personalidade e o estilo de comunicação definidos.
     4. **GERENCIE PALPITES**:
-       - Se o usuário errar, negue de forma sutil e dentro do personagem.
-       - Se o usuário acertar, confirme de maneira criativa e encerre o jogo parabenizando-o.
+        - Se o usuário errar, negue de forma sutil e dentro do personagem.
+        - Se o usuário acertar, confirme de maneira criativa e encerre o jogo parabenizando-o.
 
     Comece o jogo com a saudação definida. NADA MAIS.
     """
     
     # Cria a instância do chat com o prompt do sistema
     st.session_state.chat = genai.GenerativeModel(
-        model_name="gemini-2.5-flash",
+        model_name="gemini-1.5-flash", # Recomendo usar gemini-1.5-flash para melhor performance
         system_instruction=prompt_sistema
     ).start_chat()
 
     # Adiciona a saudação inicial do personagem ao histórico
     saudacao_inicial = st.session_state.personagem_secreto['saudacao']
     st.session_state.mensagens.append({"role": "assistant", "content": saudacao_inicial})
-
-
 # --- INTERFACE DO STREAMLIT ---
 
 st.title("🕵️ Quem Sou Eu?")
