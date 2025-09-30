@@ -31,7 +31,7 @@ def gerar_novo_personagem(lista_a_evitar: list) -> dict | None:
     Sua resposta deve ser um JSON com os campos: "personagem", "descricao", "estilo", "saudacao".
     """
     try:
-        client = genai.GenerativeModel(model_name="gemini-1.5-flash")
+        client = genai.GenerativeModel(model_name="gemini-2.5-flash")
         nomes_a_evitar = ", ".join(lista_a_evitar) if lista_a_evitar else "Nenhum"
         prompt_formatado = prompt_gerador.format(lista_geracao=nomes_a_evitar)
         response = client.generate_content(
@@ -79,7 +79,7 @@ def iniciar_novo_jogo():
     """
     
     st.session_state.chat = genai.GenerativeModel(
-        model_name="gemini-1.5-flash",
+        model_name="gemini-2.5-flash",
         system_instruction=prompt_sistema
     ).start_chat()
     
