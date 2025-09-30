@@ -28,11 +28,11 @@ Sua missão é escolher secretamente uma figura (histórica, famosa ou fictícia
 
 **REGRA CRÍTICA**: O personagem escolhido NÃO PODE ESTAR na seguinte lista de exclusão: {lista_geracao}
 
-Sua resposta deve ser um JSON estruturado com os seguintes campos:
+Sua resposta deve ter os seguintes campos:
 - "personagem": O nome do personagem.
 - "descricao": Uma narrativa sobre a persona, destacando feitos e características SEM revelar o nome.
-- "estilo": O estilo de comunicação da persona.
-- "saudacao": Uma saudação inicial característica.
+- "estilo": O estilo detalhado de comunicação da persona.
+- "saudacao": Uma saudação inicial característica, que não entregue quem é o personagem, seja discreto, já que é um jogo de advinhação.
 """
 
 # --- FUNÇÕES DO JOGO ---
