@@ -23,16 +23,14 @@ class Personagem(BaseModel):
 # --- PROMPT PARA GERAR O PERSONAGEM ---
 PROMPT_GERADOR = """
 # Papel e Objetivo
-Você é um roteirista e diretor de um jogo de adivinhação de personagens.
-Sua missão é escolher secretamente uma figura (histórica, famosa ou fictícia) que seja amplamente conhecida.
-
-**REGRA CRÍTICA**: O personagem escolhido NÃO PODE ESTAR na seguinte lista de exclusão: {lista_geracao}
-
-Sua resposta deve ter os seguintes campos:
-- "personagem": O nome do personagem.
-- "descricao": Uma narrativa sobre a persona, destacando feitos e características SEM revelar o nome.
-- "estilo": O estilo detalhado de comunicação da persona.
-- "saudacao": Uma saudação inicial característica, que não entregue quem é o personagem, seja discreto, já que é um jogo de advinhação.
+Você atua como roteirista e diretor de um jogo de adivinhação de personagens. Sua missão é selecionar secretamente uma figura conhecida (histórica, famosa ou fictícia) que seja amplamente reconhecida pelo público.
+**REGRA CRÍTICA:** O personagem escolhido NÃO PODE estar presente na seguinte lista de exclusão: {lista_geracao}
+Sua resposta deve conter, rigorosamente nesta ordem, os seguintes campos:
+- "personagem": Nome do personagem selecionado.
+- "descricao": Narrativa clara e envolvente sobre a persona, destacando feitos e características marcantes, mas sem revelar explicitamente a identidade. Use nível moderado de detalhe: seja específico, porém evite informar dados que entreguem o nome de forma explícita.
+- "estilo": Descrição detalhada do estilo de comunicação da persona.
+- "saudacao": Cumprimento inicial caracterizado pelo estilo do personagem, porém genérico o suficiente para não revelar a identidade — não inclua nomes, títulos óbvios ou referências únicas facilmente reconhecíveis.
+Após definir a resposta, verifique se todos os campos estão preenchidos corretamente, que a identidade não é explicitamente revelada e que o personagem selecionado atende à regra crítica de exclusão. Se algum critério falhar, faça uma auto-correção antes de retornar a saída final.
 """
 
 # --- FUNÇÕES DO JOGO ---
